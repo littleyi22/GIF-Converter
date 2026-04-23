@@ -249,18 +249,39 @@ select option {
 
 .preview-container {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1.5rem;
     margin-top: 1.5rem;
+}
+
+.thumbnail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 0.75rem;
+    border-radius: 16px;
+    border: 1px solid var(--glass-border);
+    transition: var(--transition);
+}
+
+.thumbnail-item.dragging {
+    opacity: 0.5;
+    transform: scale(0.95);
+    border: 1px dashed var(--accent-color);
 }
 
 .thumbnail-wrapper {
     position: relative;
-    aspect-ratio: 1;
+    aspect-ratio: 8/9;
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-    animation: scaleIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+    cursor: grab;
+}
+
+.thumbnail-wrapper:active {
+    cursor: grabbing;
 }
 
 .thumbnail-wrapper img {
@@ -288,6 +309,19 @@ select option {
     align-items: center;
     justify-content: center;
     backdrop-filter: blur(4px);
+}
+
+.thumbnail-size {
+    position: absolute;
+    bottom: 5px;
+    left: 5px;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    backdrop-filter: blur(4px);
+    pointer-events: none;
 }
 
 .thumbnail-remove {
@@ -346,6 +380,82 @@ select option {
 
 .hidden {
     display: none !important;
+}
+
+.frame-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.frame-text-input {
+    width: 100%;
+    padding: 0.6rem;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    color: white;
+    font-size: 0.85rem;
+    outline: none;
+    transition: var(--transition);
+}
+
+.frame-text-input:focus {
+    border-color: var(--accent-glow);
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.frame-settings-toggle {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0;
+    width: fit-content;
+}
+
+.frame-settings-toggle:hover {
+    color: var(--accent-color);
+}
+
+.frame-settings-panel {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.75rem;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    animation: fadeIn 0.3s ease-out;
+}
+
+.settings-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.settings-group label {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+}
+
+.settings-group input, .settings-group select {
+    padding: 0.3rem;
+    font-size: 0.75rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: 4px;
+    color: white;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .result-display {

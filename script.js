@@ -1,8 +1,18 @@
 document.addEventListener('DOMContentLoaded', () => {
     // State
-    let selectedImages = []; // Stores { id, file, originalDataUrl, dataUrl }
+    let selectedImages = []; // Stores { id, file, originalDataUrl, dataUrl, width, height, text, showBg, bgGradientIdx, bgOpacity, fontFamily, fontSize, showSettings }
     let cropper = null;
     let currentCropId = null;
+
+    // Constants
+    const fontOptions = ['Inter', 'Noto Sans TC', 'Arial', 'Verdana', 'Georgia', 'Courier New'];
+    const gradientPresets = [
+        { name: '晨曦紫', v1: '#6366f1', v2: '#a855f7' },
+        { name: '深海藍', v1: '#1e3a8a', v2: '#3b82f6' },
+        { name: '夕陽紅', v1: '#f43f5e', v2: '#fb923c' },
+        { name: '森林綠', v1: '#065f46', v2: '#10b981' },
+        { name: '金屬灰', v1: '#374151', v2: '#9ca3af' }
+    ];
 
     // Elements
     const dropZone = document.getElementById('drop-zone');
@@ -28,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const aspectRatioSelect = document.getElementById('aspect-ratio');
     const outputWidthInput = document.getElementById('output-width');
 
-    // Drag and Drop Events
+    // Drag and Drop Events for landing zone
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         dropZone.addEventListener(eventName, preventDefaults, false);
         document.body.addEventListener(eventName, preventDefaults, false);
@@ -63,36 +73,78 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleFileSelect(e) {
         const files = e.target.files;
         handleFiles(files);
-        // Reset input so the same files can be selected again if removed
         fileInput.value = '';
     }
 
     function handleFiles(files) {
         const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
-        
         if (imageFiles.length === 0) return;
 
-        // Process each file
         let loadedCount = 0;
-        
         imageFiles.forEach(file => {
             const reader = new FileReader();
             reader.onload = (e) => {
-                const id = Date.now().toString(36) + Math.random().toString(36).substr(2);
-                selectedImages.push({
-                    id: id,
-                    file: file,
-                    originalDataUrl: e.target.result,
-                    dataUrl: e.target.result
-                });
-                
-                loadedCount++;
-                if (loadedCount === imageFiles.length) {
-                    updateUI();
-                }
+                const dataUrl = e.target.result;
+                const tempImg = new Image();
+                tempImg.onload = () => {
+                    const id = 'img_' + Math.random().toString(36).substr(2, 9);
+                    selectedImages.push({
+                        id: id,
+                        file: file,
+                        originalDataUrl: dataUrl,
+                        dataUrl: dataUrl,
+                        width: tempImg.naturalWidth,
+                        height: tempImg.naturalHeight,
+                        text: '',
+                        showBg: true,
+                        bgGradientIdx: 0,
+                        bgOpacity: 0.8,
+                        fontFamily: 'Inter',
+                        fontSize: 40,
+                        showSettings: false
+                    });
+                    
+                    loadedCount++;
+                    if (loadedCount === imageFiles.length) {
+                        updateUI();
+                    }
+                };
+                tempImg.src = dataUrl;
             };
             reader.readAsDataURL(file);
         });
+    }
+
+    // Drag and Drop Reordering Handlers
+    let draggedId = null;
+
+    function handleImgDragStart(e) {
+        draggedId = this.dataset.id;
+        this.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleImgDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    }
+
+    function handleImgDrop(e) {
+        e.preventDefault();
+        const targetId = this.dataset.id;
+        if (draggedId && draggedId !== targetId) {
+            const fromIndex = selectedImages.findIndex(img => img.id === draggedId);
+            const toIndex = selectedImages.findIndex(img => img.id === targetId);
+            
+            const [movedItem] = selectedImages.splice(fromIndex, 1);
+            selectedImages.splice(toIndex, 0, movedItem);
+            updateUI();
+        }
+    }
+
+    function handleImgDragEnd() {
+        this.classList.remove('dragging');
+        draggedId = null;
     }
 
     function removeImage(id) {
@@ -106,11 +158,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function updateUI() {
-        // Clear preview
         previewContainer.innerHTML = '';
         
-        // Render thumbnails
         selectedImages.forEach((img, index) => {
+            const item = document.createElement('div');
+            item.className = 'thumbnail-item';
+            item.draggable = true;
+            item.dataset.id = img.id;
+            
+            // Drag listeners
+            item.addEventListener('dragstart', handleImgDragStart);
+            item.addEventListener('dragover', handleImgDragOver);
+            item.addEventListener('drop', handleImgDrop);
+            item.addEventListener('dragend', handleImgDragEnd);
+
             const wrapper = document.createElement('div');
             wrapper.className = 'thumbnail-wrapper';
             
@@ -120,26 +181,132 @@ document.addEventListener('DOMContentLoaded', () => {
             const numBadge = document.createElement('div');
             numBadge.className = 'thumbnail-index';
             numBadge.textContent = index + 1;
+
+            const sizeBadge = document.createElement('div');
+            sizeBadge.className = 'thumbnail-size';
+            sizeBadge.textContent = `${img.width} x ${img.height}`;
             
             const rmBtn = document.createElement('button');
             rmBtn.className = 'thumbnail-remove';
             rmBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
-            rmBtn.onclick = () => removeImage(img.id);
+            rmBtn.onclick = (e) => { e.stopPropagation(); removeImage(img.id); };
 
             const cropBtn = document.createElement('button');
             cropBtn.className = 'thumbnail-crop';
             cropBtn.innerHTML = '<i class="fa-solid fa-crop"></i>';
-            cropBtn.onclick = () => openCropper(img.id);
+            cropBtn.onclick = (e) => { e.stopPropagation(); openCropper(img.id); };
             
             wrapper.appendChild(imageEl);
             wrapper.appendChild(numBadge);
+            wrapper.appendChild(sizeBadge);
             wrapper.appendChild(cropBtn);
             wrapper.appendChild(rmBtn);
-            
-            previewContainer.appendChild(wrapper);
+
+            // Frame Controls
+            const controls = document.createElement('div');
+            controls.className = 'frame-controls';
+
+            const textInput = document.createElement('input');
+            textInput.type = 'text';
+            textInput.className = 'frame-text-input';
+            textInput.placeholder = '輸入文字...';
+            textInput.value = img.text;
+            textInput.oninput = (e) => { img.text = e.target.value; };
+
+            const settingsToggle = document.createElement('button');
+            settingsToggle.className = 'frame-settings-toggle';
+            settingsToggle.innerHTML = `<i class="fa-solid fa-palette"></i> 文字樣式設定`;
+            settingsToggle.onclick = () => {
+                img.showSettings = !img.showSettings;
+                updateUI();
+            };
+
+            controls.appendChild(textInput);
+            controls.appendChild(settingsToggle);
+
+            if (img.showSettings) {
+                const sPanel = document.createElement('div');
+                sPanel.className = 'frame-settings-panel';
+
+                // Font Family
+                const gFont = document.createElement('div');
+                gFont.className = 'settings-group';
+                gFont.innerHTML = '<label>字體</label>';
+                const fontSel = document.createElement('select');
+                fontOptions.forEach(f => {
+                    const opt = document.createElement('option');
+                    opt.value = opt.textContent = f;
+                    if (f === img.fontFamily) opt.selected = true;
+                    fontSel.appendChild(opt);
+                });
+                fontSel.onchange = (e) => { img.fontFamily = e.target.value; };
+                gFont.appendChild(fontSel);
+
+                // Font Size
+                const gSize = document.createElement('div');
+                gSize.className = 'settings-group';
+                gSize.innerHTML = '<label>大小 (px)</label>';
+                const sizeInp = document.createElement('input');
+                sizeInp.type = 'number';
+                sizeInp.value = img.fontSize;
+                sizeInp.oninput = (e) => { img.fontSize = parseInt(e.target.value) || 20; };
+                gSize.appendChild(sizeInp);
+
+                // Gradient Preset
+                const gGrad = document.createElement('div');
+                gGrad.className = 'settings-group';
+                gGrad.innerHTML = '<label>背景漸層</label>';
+                const gradSel = document.createElement('select');
+                gradientPresets.forEach((g, i) => {
+                    const opt = document.createElement('option');
+                    opt.value = i;
+                    opt.textContent = g.name;
+                    if (i === img.bgGradientIdx) opt.selected = true;
+                    gradSel.appendChild(opt);
+                });
+                gradSel.onchange = (e) => { img.bgGradientIdx = parseInt(e.target.value); };
+                gGrad.appendChild(gradSel);
+
+                // Opacity
+                const gAlpha = document.createElement('div');
+                gAlpha.className = 'settings-group';
+                gAlpha.innerHTML = `<label>透明度 (${img.bgOpacity})</label>`;
+                const alphaInp = document.createElement('input');
+                alphaInp.type = 'range';
+                alphaInp.min = 0; alphaInp.max = 1; alphaInp.step = 0.1;
+                alphaInp.value = img.bgOpacity;
+                alphaInp.oninput = (e) => { 
+                    img.bgOpacity = parseFloat(e.target.value); 
+                    gAlpha.querySelector('label').textContent = `透明度 (${img.bgOpacity})`;
+                };
+                gAlpha.appendChild(alphaInp);
+
+                // Toggle BG
+                const gShowBg = document.createElement('div');
+                gShowBg.className = 'settings-group';
+                gShowBg.style.flexDirection = 'row';
+                gShowBg.style.alignItems = 'center';
+                gShowBg.style.justifyContent = 'space-between';
+                gShowBg.innerHTML = '<label>顯示背景</label>';
+                const bgToggle = document.createElement('input');
+                bgToggle.type = 'checkbox';
+                bgToggle.checked = img.showBg;
+                bgToggle.onchange = (e) => { img.showBg = e.target.checked; };
+                gShowBg.appendChild(bgToggle);
+
+                sPanel.appendChild(gFont);
+                sPanel.appendChild(gSize);
+                sPanel.appendChild(gGrad);
+                sPanel.appendChild(gAlpha);
+                sPanel.appendChild(gShowBg);
+                controls.appendChild(sPanel);
+            }
+
+            item.appendChild(wrapper);
+            item.appendChild(controls);
+            previewContainer.appendChild(item);
         });
 
-        // Toggle buttons
         if (selectedImages.length > 0) {
             generateBtn.disabled = false;
             generateBtn.innerHTML = `<i class="fa-solid fa-film"></i> 產生 GIF (${selectedImages.length} 張圖片)`;
@@ -157,27 +324,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!imgObj) return;
         
         currentCropId = id;
-        
-        // Show modal
         cropModal.classList.remove('hidden');
-        
-        // Initialize image
         cropImage.src = imgObj.originalDataUrl;
         
-        // Calculate aspect ratio
         const ratioStr = aspectRatioSelect.value;
         const [rW, rH] = ratioStr.split(':').map(Number);
-        const targetRatio = rW / rH;
+        if (cropper) cropper.destroy();
 
-        // Destroy previous cropper if exists
-        if (cropper) {
-            cropper.destroy();
-        }
-
-        // Initialize Cropper
         cropper = new Cropper(cropImage, {
-            aspectRatio: targetRatio,
-            viewMode: 1, // Restrict crop box to not exceed size of canvas
+            aspectRatio: rW / rH,
+            viewMode: 1,
             background: false,
             zoomable: true,
             rotatable: false,
@@ -187,10 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function closeCropper() {
         cropModal.classList.add('hidden');
-        if (cropper) {
-            cropper.destroy();
-            cropper = null;
-        }
+        if (cropper) { cropper.destroy(); cropper = null; }
         currentCropId = null;
     }
 
@@ -199,75 +352,133 @@ document.addEventListener('DOMContentLoaded', () => {
 
     saveCropBtn.addEventListener('click', () => {
         if (!cropper || !currentCropId) return;
-        
-        // Get cropped canvas
-        const canvas = cropper.getCroppedCanvas({
-            imageSmoothingEnabled: true,
-            imageSmoothingQuality: 'high',
-        });
-        
+        const canvas = cropper.getCroppedCanvas({ imageSmoothingEnabled: true, imageSmoothingQuality: 'high' });
         if (canvas) {
             const croppedUrl = canvas.toDataURL('image/png');
-            
-            // Update image data
             const imgIndex = selectedImages.findIndex(img => img.id === currentCropId);
             if (imgIndex !== -1) {
                 selectedImages[imgIndex].dataUrl = croppedUrl;
+                selectedImages[imgIndex].width = canvas.width;
+                selectedImages[imgIndex].height = canvas.height;
                 updateUI();
             }
         }
         closeCropper();
     });
 
-    // Generate GIF
-    generateBtn.addEventListener('click', () => {
-        if (selectedImages.length === 0) return;
+    // Drawing helper
+    function drawStyledText(ctx, text, style, canvasWidth, canvasHeight) {
+        if (!text) return;
+        ctx.font = `${style.fontSize}px "${style.fontFamily}", sans-serif`;
+        const textMetrics = ctx.measureText(text);
+        const textWidth = textMetrics.width;
+        const textHeight = style.fontSize;
+        
+        const px = 24; const py = 12;
+        const bgW = textWidth + px * 2;
+        const bgH = textHeight + py * 2;
+        const bgX = (canvasWidth - bgW) / 2;
+        const bgY = canvasHeight - bgH - 40;
 
-        // Get settings
+        if (style.showBg) {
+            ctx.save();
+            ctx.globalAlpha = style.bgOpacity;
+            const radius = 15;
+            ctx.beginPath();
+            ctx.moveTo(bgX + radius, bgY);
+            ctx.lineTo(bgX + bgW - radius, bgY);
+            ctx.quadraticCurveTo(bgX + bgW, bgY, bgX + bgW, bgY + radius);
+            ctx.lineTo(bgX + bgW, bgY + bgH - radius);
+            ctx.quadraticCurveTo(bgX + bgW, bgY + bgH, bgX + bgW - radius, bgY + bgH);
+            ctx.lineTo(bgX + radius, bgY + bgH);
+            ctx.quadraticCurveTo(bgX, bgY + bgH, bgX, bgY + bgH - radius);
+            ctx.lineTo(bgX, bgY + radius);
+            ctx.quadraticCurveTo(bgX, bgY, bgX + radius, bgY);
+            ctx.closePath();
+
+            const preset = gradientPresets[style.bgGradientIdx];
+            const gradient = ctx.createLinearGradient(bgX, bgY, bgX + bgW, bgY + bgH);
+            gradient.addColorStop(0, preset.v1);
+            gradient.addColorStop(1, preset.v2);
+            ctx.fillStyle = gradient;
+            ctx.fill();
+            ctx.restore();
+        }
+
+        ctx.fillStyle = 'white';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+        ctx.shadowBlur = 10;
+        ctx.fillText(text, canvasWidth / 2, bgY + bgH / 2);
+    }
+
+    async function preprocessFrame(imgObj, targetWidth, targetHeight) {
+        return new Promise((resolve) => {
+            const canvas = document.createElement('canvas');
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            img.onload = () => {
+                const imgRatio = img.width / img.height;
+                const targetRatio = targetWidth / targetHeight;
+                let dW, dH, dX, dY;
+                if (imgRatio > targetRatio) {
+                    dH = targetHeight; dW = targetHeight * imgRatio;
+                    dX = (targetWidth - dW) / 2; dY = 0;
+                } else {
+                    dW = targetWidth; dH = targetWidth / imgRatio;
+                    dX = 0; dY = (targetHeight - dH) / 2;
+                }
+                ctx.drawImage(img, dX, dY, dW, dH);
+                if (imgObj.text) drawStyledText(ctx, imgObj.text, imgObj, targetWidth, targetHeight);
+                resolve(canvas.toDataURL('image/png'));
+            };
+            img.src = imgObj.dataUrl;
+        });
+    }
+
+    // Generate GIF
+    generateBtn.addEventListener('click', async () => {
+        if (selectedImages.length === 0) return;
         const durationSec = parseFloat(frameDurationInput.value) || 2;
         const width = parseInt(outputWidthInput.value) || 800;
-        
-        // Calculate height based on aspect ratio
-        const ratioStr = aspectRatioSelect.value; // e.g., "8:9"
+        const ratioStr = aspectRatioSelect.value;
         const [rW, rH] = ratioStr.split(':').map(Number);
         const height = Math.round(width * (rH / rW));
 
-        // Prepare image array for gifshot (it takes Data URLs, image elements, or URLs)
-        const imagesToProcess = selectedImages.map(img => img.dataUrl);
-
-        // Show loading
         loadingOverlay.classList.remove('hidden');
         progressBar.style.width = '0%';
         resultPanel.classList.add('hidden');
 
-        // Create GIF
+        // Preprocess all frames
+        const processedImages = [];
+        for (let i = 0; i < selectedImages.length; i++) {
+            const dataUrl = await preprocessFrame(selectedImages[i], width, height);
+            processedImages.push(dataUrl);
+            progressBar.style.width = Math.round(((i + 1) / selectedImages.length) * 30) + '%';
+        }
+
         gifshot.createGIF({
-            images: imagesToProcess,
+            images: processedImages,
             interval: durationSec, 
             gifWidth: width,
             gifHeight: height,
-            sampleInterval: 10, // Quality setting (lower is better but slower, 10 is default)
+            sampleInterval: 10,
             numWorkers: 2,
-            progressCallback: function(captureProgress) {
-                // Progress is a float from 0 to 1
-                progressBar.style.width = Math.round(captureProgress * 100) + '%';
+            progressCallback: (p) => {
+                progressBar.style.width = (30 + Math.round(p * 70)) + '%';
             }
-        }, function(obj) {
+        }, (obj) => {
             loadingOverlay.classList.add('hidden');
-            
             if(!obj.error) {
-                const finalGifUrl = obj.image;
-                
-                // Show result
-                resultGif.src = finalGifUrl;
-                downloadLink.href = finalGifUrl;
-                
+                resultGif.src = obj.image;
+                downloadLink.href = obj.image;
                 resultPanel.classList.remove('hidden');
-                
-                // Scroll to result
                 resultPanel.scrollIntoView({ behavior: 'smooth' });
             } else {
-                alert('生成 GIF 時發生錯誤，請稍後再試！\n錯誤: ' + obj.errorCode);
+                alert('生成錯誤: ' + obj.errorCode);
             }
         });
     });
