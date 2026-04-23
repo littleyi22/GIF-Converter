@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     // State
-    let selectedImages = []; // Stores { id, file, originalDataUrl, dataUrl, width, height, text, showBg, bgGradientIdx, bgOpacity, fontFamily, fontSize, showSettings }
+    let selectedImages = []; // Stores { id, file, originalDataUrl, dataUrl, width, height, text, showBg, bgGradientIdx, bgOpacity, fontFamily, fontSize, vAlign, hAlign, showSettings }
     let cropper = null;
     let currentCropId = null;
 
@@ -101,6 +101,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         bgOpacity: 0.8,
                         fontFamily: 'Inter',
                         fontSize: 40,
+                        vAlign: 'bottom',
+                        hAlign: 'center',
                         showSettings: false
                     });
                     
@@ -252,6 +254,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 sizeInp.oninput = (e) => { img.fontSize = parseInt(e.target.value) || 20; };
                 gSize.appendChild(sizeInp);
 
+                // Alignment
+                const gAlign = document.createElement('div');
+                gAlign.className = 'settings-group';
+                gAlign.innerHTML = '<label>對齊位置</label>';
+                const alignGrid = document.createElement('div');
+                alignGrid.className = 'alignment-grid';
+                const vSel = document.createElement('select');
+                [['top','上方'],['middle','中央'],['bottom','下方']].forEach(([v,l]) => {
+                    const opt = document.createElement('option'); opt.value = v; opt.textContent = l;
+                    if (v === img.vAlign) opt.selected = true; vSel.appendChild(opt);
+                });
+                vSel.onchange = (e) => { img.vAlign = e.target.value; };
+                const hSel = document.createElement('select');
+                [['left','靠左'],['center','置中'],['right','靠右']].forEach(([h,l]) => {
+                    const opt = document.createElement('option'); opt.value = h; opt.textContent = l;
+                    if (h === img.hAlign) opt.selected = true; hSel.appendChild(opt);
+                });
+                hSel.onchange = (e) => { img.hAlign = e.target.value; };
+                alignGrid.appendChild(vSel); alignGrid.appendChild(hSel);
+                gAlign.appendChild(alignGrid);
+
                 // Gradient Preset
                 const gGrad = document.createElement('div');
                 gGrad.className = 'settings-group';
@@ -294,11 +317,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 bgToggle.onchange = (e) => { img.showBg = e.target.checked; };
                 gShowBg.appendChild(bgToggle);
 
+                // Apply to All
+                const applyAllBtn = document.createElement('button');
+                applyAllBtn.className = 'btn-apply-all';
+                applyAllBtn.innerHTML = '<i class="fa-solid fa-copy"></i> 此樣式套用全體';
+                applyAllBtn.onclick = () => {
+                    selectedImages.forEach(t => {
+                        t.showBg = img.showBg; t.bgGradientIdx = img.bgGradientIdx;
+                        t.bgOpacity = img.bgOpacity; t.fontFamily = img.fontFamily;
+                        t.fontSize = img.fontSize; t.vAlign = img.vAlign; t.hAlign = img.hAlign;
+                    });
+                    updateUI();
+                };
+
                 sPanel.appendChild(gFont);
                 sPanel.appendChild(gSize);
+                sPanel.appendChild(gAlign);
                 sPanel.appendChild(gGrad);
                 sPanel.appendChild(gAlpha);
                 sPanel.appendChild(gShowBg);
+                sPanel.appendChild(applyAllBtn);
                 controls.appendChild(sPanel);
             }
 
@@ -377,8 +415,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const px = 24; const py = 12;
         const bgW = textWidth + px * 2;
         const bgH = textHeight + py * 2;
-        const bgX = (canvasWidth - bgW) / 2;
-        const bgY = canvasHeight - bgH - 40;
+        
+        // Horizontal
+        let bgX;
+        if (style.hAlign === 'left') bgX = 20;
+        else if (style.hAlign === 'right') bgX = canvasWidth - bgW - 20;
+        else bgX = (canvasWidth - bgW) / 2;
+
+        // Vertical
+        let bgY;
+        if (style.vAlign === 'top') bgY = 20;
+        else if (style.vAlign === 'middle') bgY = (canvasHeight - bgH) / 2;
+        else bgY = canvasHeight - bgH - 40;
 
         if (style.showBg) {
             ctx.save();
@@ -410,7 +458,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.textBaseline = 'middle';
         ctx.shadowColor = 'rgba(0,0,0,0.5)';
         ctx.shadowBlur = 10;
-        ctx.fillText(text, canvasWidth / 2, bgY + bgH / 2);
+        ctx.fillText(text, bgX + bgW/2, bgY + bgH/2);
     }
 
     async function preprocessFrame(imgObj, targetWidth, targetHeight) {
@@ -452,7 +500,6 @@ document.addEventListener('DOMContentLoaded', () => {
         progressBar.style.width = '0%';
         resultPanel.classList.add('hidden');
 
-        // Preprocess all frames
         const processedImages = [];
         for (let i = 0; i < selectedImages.length; i++) {
             const dataUrl = await preprocessFrame(selectedImages[i], width, height);

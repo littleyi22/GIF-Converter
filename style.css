@@ -453,6 +453,28 @@ select option {
     color: white;
 }
 
+.btn-apply-all {
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background: rgba(99, 102, 241, 0.2);
+    border: 1px solid var(--accent-color);
+    color: white;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.btn-apply-all:hover {
+    background: var(--accent-color);
+}
+
+.alignment-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+}
+
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(-5px); }
     to { opacity: 1; transform: translateY(0); }
