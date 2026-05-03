@@ -108,6 +108,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     loadedCount++;
                     if (loadedCount === imageFiles.length) {
+                        const maxWidth = Math.max(...selectedImages.map(img => img.width));
+                        if (maxWidth > 0) outputWidthInput.value = maxWidth;
                         updateUI();
                     }
                 };
@@ -374,7 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
             viewMode: 1,
             background: false,
             zoomable: true,
-            rotatable: false,
+            rotatable: true,
             guides: true,
         });
     }
@@ -384,6 +386,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (cropper) { cropper.destroy(); cropper = null; }
         currentCropId = null;
     }
+
+    const rotateLeftBtn = document.getElementById('rotate-left-btn');
+    const rotateRightBtn = document.getElementById('rotate-right-btn');
+
+    rotateLeftBtn.addEventListener('click', () => {
+        if (cropper) cropper.rotate(-90);
+    });
+
+    rotateRightBtn.addEventListener('click', () => {
+        if (cropper) cropper.rotate(90);
+    });
 
     closeCropBtn.addEventListener('click', closeCropper);
     cancelCropBtn.addEventListener('click', closeCropper);
