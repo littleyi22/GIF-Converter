@@ -1,132 +1,28 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-Hant">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>圖片轉 GIF 工具 | Image to GIF Converter</title>
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-    <!-- Font Awesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Cropper.js -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet">
-    <!-- Styles -->
-    <link rel="stylesheet" href="style.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="網站搬家通知，請前往奕鈞老師數位教學備課室。">
+<meta name="ijun-relocation" content="ijun-github-relocation-20261021">
+<link rel="canonical" href="https://www.ijun-ai.com/">
+<title>網站搬家通知｜奕鈞老師</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;min-height:100svh;display:grid;place-items:center;padding:28px 18px;background:#fff9ee;color:#332a20;font-family:"Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;line-height:1.8}
+main{width:100%;max-width:640px;padding:48px 36px;background:#fff;border:1px solid #f0dbb7;border-top:7px solid #f6aa24;border-radius:22px;box-shadow:0 16px 50px #8b5c1710;text-align:center}
+.brand{margin:0;color:#985506;font-weight:700;letter-spacing:.08em;font-size:14px}.icon{font-size:52px;margin:16px 0 8px}h1{font-size:34px;line-height:1.4;margin:12px 0 18px}p{margin:12px 0}.original{color:#796e60;font-size:14px;overflow-wrap:anywhere}.button{display:inline-block;margin:18px 0 12px;padding:14px 28px;background:#f5a51b;color:#332100;border-radius:12px;font-size:18px;font-weight:700;text-decoration:none}.button:hover{background:#ffc35a}.button:focus-visible{outline:3px solid #654016;outline-offset:5px}.url{color:#925208;overflow-wrap:anywhere;font-size:15px}footer{margin-top:24px;padding-top:20px;border-top:1px solid #f0e7db;color:#857667;font-size:13px}@media(max-width:480px){main{padding:34px 22px}h1{font-size:29px}}
+</style>
 </head>
 <body>
-    <div class="app-container">
-        <header class="app-header">
-            <h1><i class="fa-solid fa-wand-magic-sparkles"></i> 圖片轉 GIF 工具</h1>
-            <p>快速將多張圖片轉換為高品質的 GIF 動畫</p>
-        </header>
-
-        <main class="app-main">
-            <!-- Settings Section -->
-            <section class="settings-panel glass-panel">
-                <h2><i class="fa-solid fa-sliders"></i> 設定 (Settings)</h2>
-                <div class="settings-grid">
-                    <div class="setting-item">
-                        <label for="frame-duration" title="每張圖片顯示的秒數">每張圖片呈現時間 (秒)</label>
-                        <input type="number" id="frame-duration" value="2" min="0.1" step="0.1">
-                    </div>
-                    <div class="setting-item">
-                        <label for="aspect-ratio">GIF 比例</label>
-                        <select id="aspect-ratio">
-                            <option value="8:9">8:9 (直式，如 800x900)</option>
-                            <option value="1:1">1:1 (正方形，如 800x800)</option>
-                            <option value="4:5">4:5 (IG 貼文，如 800x1000)</option>
-                            <option value="16:9" selected>16:9 (橫式，如 1600x900)</option>
-                            <option value="9:16">9:16 (直式，如 900x1600)</option>
-                        </select>
-                    </div>
-                    <div class="setting-item">
-                        <label for="output-width">輸出寬度 (px)</label>
-                        <input type="number" id="output-width" value="800" min="100" step="10">
-                    </div>
-                </div>
-            </section>
-
-            <!-- Upload Section -->
-            <section class="upload-panel glass-panel">
-                <div class="drop-zone" id="drop-zone">
-                    <i class="fa-solid fa-cloud-arrow-up drop-icon"></i>
-                    <h3>拖曳圖片至此，或點擊上傳</h3>
-                    <p>支援 JPG, PNG, WEBP 格式 (可選取多張)</p>
-                    <input type="file" id="file-input" multiple accept="image/*" hidden>
-                    <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
-                        選擇圖片
-                    </button>
-                    <button class="btn btn-danger" id="clear-images-btn" style="display:none; margin-top:10px;">
-                        <i class="fa-solid fa-trash"></i> 清除所有圖片
-                    </button>
-                </div>
-                
-                <!-- Preview Area -->
-                <div class="preview-container" id="preview-container">
-                    <!-- Thumbnails will be injected here -->
-                </div>
-            </section>
-
-            <!-- Action Section -->
-            <section class="action-panel">
-                <button class="btn btn-generate" id="generate-btn" disabled>
-                    <i class="fa-solid fa-film"></i> 產生 GIF
-                </button>
-            </section>
-
-            <!-- Result Section -->
-            <section class="result-panel glass-panel hidden" id="result-panel">
-                <h2><i class="fa-solid fa-check-circle"></i> 轉換完成！</h2>
-                <div class="result-display">
-                    <img id="result-gif" src="" alt="生成的 GIF" />
-                </div>
-                <div class="result-actions">
-                    <a id="download-link" class="btn btn-success" download="animated.gif">
-                        <i class="fa-solid fa-download"></i> 下載 GIF
-                    </a>
-                </div>
-            </section>
-            
-            <!-- Loading Overlay -->
-            <div class="loading-overlay hidden" id="loading-overlay">
-                <div class="spinner"></div>
-                <p>正在生成 GIF，請稍候...</p>
-                <div class="progress-bar-container">
-                    <div class="progress-bar" id="progress-bar"></div>
-                </div>
-            </div>
-        </main>
-        <!-- Crop Modal -->
-        <div class="crop-modal hidden" id="crop-modal">
-            <div class="crop-modal-content glass-panel">
-                <div class="crop-header">
-                    <h2><i class="fa-solid fa-crop-simple"></i> 裁切圖片</h2>
-                    <button class="btn-close" id="close-crop-btn"><i class="fa-solid fa-xmark"></i></button>
-                </div>
-                <div class="crop-body">
-                    <div class="img-container">
-                        <img id="crop-image" src="" alt="Picture to crop">
-                    </div>
-                </div>
-                <div class="crop-footer">
-                    <div style="flex: 1; display: flex; gap: 0.5rem;">
-                        <button class="btn" id="rotate-left-btn" style="background: rgba(255,255,255,0.1); color: white;" title="向左旋轉"><i class="fa-solid fa-rotate-left"></i></button>
-                        <button class="btn" id="rotate-right-btn" style="background: rgba(255,255,255,0.1); color: white;" title="向右旋轉"><i class="fa-solid fa-rotate-right"></i></button>
-                    </div>
-                    <button class="btn btn-danger" id="cancel-crop-btn">取消</button>
-                    <button class="btn btn-primary" id="save-crop-btn">儲存裁切</button>
-                </div>
-            </div>
-        </div>
-        
-        <footer>
-            <p>&copy; 2026 奕鈞老師製作 | 版本 1.4 | Designed for excellent user experience.</p>
-        </footer>
-    </div>
-
-    <!-- Scripts -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gifshot/0.3.2/gifshot.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
-    <script src="script.js"></script>
+<main>
+<p class="brand">奕鈞老師數位教學備課室</p>
+<div class="icon" aria-hidden="true">🏠</div>
+<h1>網站搬家囉！</h1>
+<p>請前往新網站，瀏覽最新的教學工具與教材。</p>
+<p class="original">原網站：圖片轉 GIF 工具 | Image to GIF Converter</p>
+<a class="button" href="https://www.ijun-ai.com/">前往新網站 →</a>
+<p><a class="url" href="https://www.ijun-ai.com/">https://www.ijun-ai.com/</a></p>
+<footer>感謝您的支持與使用。</footer>
+</main>
 </body>
 </html>
